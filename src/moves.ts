@@ -340,31 +340,37 @@ const getKingMoves = (
 
 	if (!includeCastling) return moves
 
-	if (color === "w") {
-		if (state.castling.whiteKingSide && canCastleKingSide(state, "w")) {
-			moves.push({
-				from: "e1",
-				to: "g1"
-			})
-		}
-		if (state.castling.whiteQueenSide && canCastleQueenSide(state, "w")) {
-			moves.push({
-				from: "e1",
-				to: "c1"
-			})
-		}
-	} else {
-		if (state.castling.blackKingSide && canCastleKingSide(state, "b")) {
-			moves.push({
-				from: "e8",
-				to: "g8"
-			})
-		}
-		if (state.castling.blackQueenSide && canCastleQueenSide(state, "b")) {
-			moves.push({
-				from: "e8",
-				to: "c8"
-			})
+	const lastRank = color === "w" ? state.boardSize - 1 : 0
+	const kingFile = Math.floor(state.boardSize / 2)
+	const kingSquare = coordsToSquare(lastRank, kingFile, state.boardSize)
+
+	if (rank === lastRank && file === kingFile) {
+		if (color === "w") {
+			if (state.castling.whiteKingSide && canCastleKingSide(state, "w")) {
+				moves.push({
+					from: kingSquare,
+					to: coordsToSquare(lastRank, kingFile + 2, state.boardSize)
+				})
+			}
+			if (state.castling.whiteQueenSide && canCastleQueenSide(state, "w")) {
+				moves.push({
+					from: kingSquare,
+					to: coordsToSquare(lastRank, kingFile - 2, state.boardSize)
+				})
+			}
+		} else {
+			if (state.castling.blackKingSide && canCastleKingSide(state, "b")) {
+				moves.push({
+					from: kingSquare,
+					to: coordsToSquare(lastRank, kingFile + 2, state.boardSize)
+				})
+			}
+			if (state.castling.blackQueenSide && canCastleQueenSide(state, "b")) {
+				moves.push({
+					from: kingSquare,
+					to: coordsToSquare(lastRank, kingFile - 2, state.boardSize)
+				})
+			}
 		}
 	}
 
@@ -372,12 +378,21 @@ const getKingMoves = (
 }
 
 const canCastleKingSide = (state: GameState, color: Color) => {
-	const squares = color === "w" ? ["f1", "g1"] : ["f8", "g8"]
-	const kingSquare = color === "w" ? "e1" : "e8"
-	const rookSquare = color === "w" ? "h1" : "h8"
+	const lastRank = color === "w" ? state.boardSize - 1 : 0
+	const kingFile = Math.floor(state.boardSize / 2)
+	const kingSquare = coordsToSquare(lastRank, kingFile, state.boardSize)
+	const rookSquare = coordsToSquare(
+		lastRank,
+		state.boardSize - 1,
+		state.boardSize
+	)
+	const intermediateSquares = [
+		coordsToSquare(lastRank, kingFile + 1, state.boardSize),
+		coordsToSquare(lastRank, kingFile + 2, state.boardSize)
+	]
 
 	if (
-		!getPieceAt(state.board, rookSquare as Square, state.boardSize)?.startsWith(
+		!getPieceAt(state.board, rookSquare, state.boardSize)?.startsWith(
 			`${color}r`
 		)
 	) {
@@ -385,11 +400,11 @@ const canCastleKingSide = (state: GameState, color: Color) => {
 	}
 
 	return (
-		squares.every(
+		intermediateSquares.every(
 			(square) => !getPieceAt(state.board, square as Square, state.boardSize)
 		) &&
 		!isSquareUnderAttack(state, kingSquare as Square, color, state.boardSize) &&
-		squares.every(
+		intermediateSquares.every(
 			(square) =>
 				!isSquareUnderAttack(state, square as Square, color, state.boardSize)
 		)
@@ -397,13 +412,21 @@ const canCastleKingSide = (state: GameState, color: Color) => {
 }
 
 const canCastleQueenSide = (state: GameState, color: Color) => {
-	const squares = color === "w" ? ["d1", "c1", "b1"] : ["d8", "c8", "b8"]
-	const kingSquare = color === "w" ? "e1" : "e8"
-	const checkSquares = color === "w" ? ["d1", "c1"] : ["d8", "c8"]
-	const rookSquare = color === "w" ? "a1" : "a8"
+	const lastRank = color === "w" ? state.boardSize - 1 : 0
+	const kingFile = Math.floor(state.boardSize / 2)
+	const kingSquare = coordsToSquare(lastRank, kingFile, state.boardSize)
+	const rookSquare = coordsToSquare(lastRank, 0, state.boardSize)
+	const intermediateSquares = [
+		coordsToSquare(lastRank, kingFile - 1, state.boardSize),
+		coordsToSquare(lastRank, kingFile - 2, state.boardSize)
+	]
+	const allEmptySquares = [
+		...intermediateSquares,
+		coordsToSquare(lastRank, kingFile - 3, state.boardSize)
+	]
 
 	if (
-		!getPieceAt(state.board, rookSquare as Square, state.boardSize)?.startsWith(
+		!getPieceAt(state.board, rookSquare, state.boardSize)?.startsWith(
 			`${color}r`
 		)
 	) {
@@ -411,11 +434,11 @@ const canCastleQueenSide = (state: GameState, color: Color) => {
 	}
 
 	return (
-		squares.every(
+		allEmptySquares.every(
 			(square) => !getPieceAt(state.board, square as Square, state.boardSize)
 		) &&
 		!isSquareUnderAttack(state, kingSquare as Square, color, state.boardSize) &&
-		checkSquares.every(
+		intermediateSquares.every(
 			(square) =>
 				!isSquareUnderAttack(state, square as Square, color, state.boardSize)
 		)
@@ -579,10 +602,15 @@ export const moveToAlgebraic = (state: GameState, move: Move): string => {
 
 	// Handle castling
 	if (piece[1] === "k") {
-		if (move.from === "e1" && move.to === "g1") return "O-O"
-		if (move.from === "e1" && move.to === "c1") return "O-O-O"
-		if (move.from === "e8" && move.to === "g8") return "O-O"
-		if (move.from === "e8" && move.to === "c8") return "O-O-O"
+		const kingFile = Math.floor(state.boardSize / 2)
+		const lastRank = piece[0] === "w" ? state.boardSize - 1 : 0
+		const kingSquare = coordsToSquare(lastRank, kingFile, state.boardSize)
+
+		if (move.from === kingSquare) {
+			const [, toFile] = squareToCoords(move.to, state.boardSize)
+			if (toFile === kingFile + 2) return "O-O"
+			if (toFile === kingFile - 2) return "O-O-O"
+		}
 	}
 
 	let notation = ""
