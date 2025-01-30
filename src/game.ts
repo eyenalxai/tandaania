@@ -1,9 +1,10 @@
 import {
 	type Move,
 	coordsToSquare,
+	getAllValidMoves,
 	getPieceAt,
-	getRawMovesForPiece,
 	getValidMoves,
+	isSquareUnderAttack,
 	squareToCoords
 } from "@/moves"
 import {
@@ -34,67 +35,99 @@ export class ChessGame {
 
 	public getValidMoves = (square: Square) => getValidMoves(this.state, square)
 
+	private findKingPosition(color: Color): Square | null {
+		for (let rank = 0; rank < 8; rank++) {
+			for (let file = 0; file < 8; file++) {
+				const square = coordsToSquare(rank, file)
+				const piece = getPieceAt(this.state.board, square)
+				if (piece && piece[0] === color && piece[1] === "k") {
+					return square
+				}
+			}
+		}
+		return null
+	}
+
+	private updateCastlingRights(piece: Piece, from: Square, to: Square) {
+		if (piece[1] === "k") {
+			if (piece[0] === "w") {
+				this.state.castling.whiteKingSide = false
+				this.state.castling.whiteQueenSide = false
+			} else {
+				this.state.castling.blackKingSide = false
+				this.state.castling.blackQueenSide = false
+			}
+		} else if (piece[1] === "r") {
+			if (from === "a1") this.state.castling.whiteQueenSide = false
+			if (from === "h1") this.state.castling.whiteKingSide = false
+			if (from === "a8") this.state.castling.blackQueenSide = false
+			if (from === "h8") this.state.castling.blackKingSide = false
+		}
+
+		// Handle captured rooks
+		const capturedPiece = getPieceAt(this.state.board, to)
+		if (capturedPiece?.[1] === "r") {
+			switch (to) {
+				case "a1":
+					this.state.castling.whiteQueenSide = false
+					break
+				case "h1":
+					this.state.castling.whiteKingSide = false
+					break
+				case "a8":
+					this.state.castling.blackQueenSide = false
+					break
+				case "h8":
+					this.state.castling.blackKingSide = false
+					break
+			}
+		}
+	}
+
+	private handleCastling(piece: Piece, from: Square, to: Square) {
+		if (piece[1] !== "k") return
+
+		if (from === "e1" && to === "g1") {
+			// White kingside
+			this.state.board[7][7] = null
+			this.state.board[7][5] = "wr"
+		} else if (from === "e1" && to === "c1") {
+			// White queenside
+			this.state.board[7][0] = null
+			this.state.board[7][3] = "wr"
+		} else if (from === "e8" && to === "g8") {
+			// Black kingside
+			this.state.board[0][7] = null
+			this.state.board[0][5] = "br"
+		} else if (from === "e8" && to === "c8") {
+			// Black queenside
+			this.state.board[0][0] = null
+			this.state.board[0][3] = "br"
+		}
+	}
+
+	private updateEnPassantTarget(
+		piece: Piece,
+		fromRank: number,
+		toRank: number,
+		fromFile: number
+	) {
+		if (piece[1] === "p" && Math.abs(toRank - fromRank) === 2) {
+			const enPassantRank = (fromRank + toRank) / 2
+			this.state.enPassantTarget =
+				`${String.fromCharCode(fromFile + 97)}${8 - enPassantRank}` as Square
+		} else {
+			this.state.enPassantTarget = null
+		}
+	}
+
 	public getStatus() {
 		const activeColor = this.state.activeColor
-		let hasValidMoves = false
-		let isInCheck = false
-
-		for (let rank = 0; rank < 8; rank++) {
-			for (let file = 0; file < 8; file++) {
-				const square = coordsToSquare(rank, file)
-				const piece = getPieceAt(this.state.board, square)
-				if (!piece || piece[0] !== activeColor) continue
-
-				const moves = this.getValidMoves(square)
-				if (moves.length > 0) {
-					hasValidMoves = true
-					break
-				}
-			}
-			if (hasValidMoves) break
-		}
-
-		// Find the king's position
-		let kingSquare: Square | null = null
-		for (let rank = 0; rank < 8; rank++) {
-			for (let file = 0; file < 8; file++) {
-				const square = coordsToSquare(rank, file)
-				const piece = getPieceAt(this.state.board, square)
-				if (piece && piece[0] === activeColor && piece[1] === "k") {
-					kingSquare = square
-					break
-				}
-			}
-			if (kingSquare) break
-		}
-
-		// Check if king is in check
-		if (kingSquare) {
-			const tempState: GameState = {
-				...this.state,
-				activeColor: (activeColor === "w" ? "b" : "w") as Color
-			}
-
-			for (let rank = 0; rank < 8; rank++) {
-				for (let file = 0; file < 8; file++) {
-					const square = coordsToSquare(rank, file)
-					const piece = getPieceAt(tempState.board, square)
-					if (!piece || piece[0] === activeColor) continue
-
-					const moves = getRawMovesForPiece(
-						tempState,
-						rank,
-						file,
-						piece[0] as Color
-					)
-					if (moves.some((m: Move) => m.to === kingSquare)) {
-						isInCheck = true
-						break
-					}
-				}
-				if (isInCheck) break
-			}
-		}
+		const hasValidMoves = getAllValidMoves(this.state).length > 0
+		const kingSquare = this.findKingPosition(activeColor)
+		const isInCheck = kingSquare
+			? isSquareUnderAttack(this.state, kingSquare, activeColor)
+			: false
 
 		if (!hasValidMoves) {
 			return isInCheck ? "checkmate" : "stalemate"
@@ -134,50 +167,13 @@ export class ChessGame {
 		this.state.board[fromRank][fromFile] = null
 
 		// Handle castling
-		if (movingPiece[1] === "k") {
-			if (move.from === "e1" && move.to === "g1") {
-				// White kingside
-				this.state.board[7][7] = null
-				this.state.board[7][5] = "wr"
-			} else if (move.from === "e1" && move.to === "c1") {
-				// White queenside
-				this.state.board[7][0] = null
-				this.state.board[7][3] = "wr"
-			} else if (move.from === "e8" && move.to === "g8") {
-				// Black kingside
-				this.state.board[0][7] = null
-				this.state.board[0][5] = "br"
-			} else if (move.from === "e8" && move.to === "c8") {
-				// Black queenside
-				this.state.board[0][0] = null
-				this.state.board[0][3] = "br"
-			}
-		}
+		this.handleCastling(movingPiece, move.from, move.to)
 
 		// Update castling rights
-		if (movingPiece[1] === "k") {
-			if (this.state.activeColor === "w") {
-				this.state.castling.whiteKingSide = false
-				this.state.castling.whiteQueenSide = false
-			} else {
-				this.state.castling.blackKingSide = false
-				this.state.castling.blackQueenSide = false
-			}
-		} else if (movingPiece[1] === "r") {
-			if (move.from === "a1") this.state.castling.whiteQueenSide = false
-			if (move.from === "h1") this.state.castling.whiteKingSide = false
-			if (move.from === "a8") this.state.castling.blackQueenSide = false
-			if (move.from === "h8") this.state.castling.blackKingSide = false
-		}
+		this.updateCastlingRights(movingPiece, move.from, move.to)
 
 		// Update en passant target
-		if (movingPiece[1] === "p" && Math.abs(toRank - fromRank) === 2) {
-			const enPassantRank = (fromRank + toRank) / 2
-			this.state.enPassantTarget =
-				`${String.fromCharCode(fromFile + 97)}${8 - enPassantRank}` as Square
-		} else {
-			this.state.enPassantTarget = null
-		}
+		this.updateEnPassantTarget(movingPiece, fromRank, toRank, fromFile)
 
 		// Update move clocks
 		if (movingPiece[1] === "p" || this.state.board[toRank][toFile] !== null) {
@@ -193,25 +189,6 @@ export class ChessGame {
 		this.state.activeColor = (
 			this.state.activeColor === "w" ? "b" : "w"
 		) as Color
-
-		// Handle captured rooks for castling rights
-		const capturedPiece = getPieceAt(this.state.board, move.to)
-		if (capturedPiece?.[1] === "r") {
-			switch (move.to) {
-				case "a1":
-					this.state.castling.whiteQueenSide = false
-					break
-				case "h1":
-					this.state.castling.whiteKingSide = false
-					break
-				case "a8":
-					this.state.castling.blackQueenSide = false
-					break
-				case "h8":
-					this.state.castling.blackKingSide = false
-					break
-			}
-		}
 
 		this.moveHistory.push(move)
 
