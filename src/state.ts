@@ -1,20 +1,3 @@
-/**
- * Chess game state and validation.
- *
- * Board Size Requirements:
- * - Minimum size: 8x8 (standard chess board)
- * - Maximum size: 16x16
- * - Files are lettered a-p based on board width
- * - Ranks are numbered 1-N where N is the board size
- *
- * Special Move Adjustments:
- * - Castling: King starts at center file, rooks at edges
- * - En Passant: Target squares at 37.5% and 75% of board height
- * - Pawn Promotion: Occurs on last rank (N for white, 1 for black)
- */
-
-import { squareToCoords } from "@/moves"
-
 export type Color = "w" | "b"
 
 export type PieceType = "p" | "n" | "b" | "r" | "q" | "k"
@@ -108,26 +91,9 @@ export const charToPiece = (char: string): Piece => {
 	return `${color}${pieceType}` as Piece
 }
 
-export const validateBoardSize = (size: number): boolean => {
-	if (size < 8 || size > 16) {
-		throw new Error("Invalid board size: must be between 8 and 16")
-	}
-	return true
-}
-
-const isValidEnPassantSquare = (square: Square, boardSize: number) => {
-	const [rank, _] = squareToCoords(square, boardSize)
-
-	// For 8x8 board: ranks 3 and 6
-	// For larger boards: equivalent ranks based on board size
-	if (boardSize === 8) {
-		return rank === 5 || rank === 2 // 5 is rank 3, 2 is rank 6 in zero-based indexing
-	}
-
-	// For larger boards, en passant squares should be at equivalent positions
-	const firstEnPassantRank = Math.floor(boardSize * 0.375) // equivalent to rank 3 in 8x8
-	const secondEnPassantRank = Math.floor(boardSize * 0.75) // equivalent to rank 6 in 8x8
-	return rank === firstEnPassantRank || rank === secondEnPassantRank
+const isValidEnPassantSquare = (square: Square) => {
+	const rank = square[1]
+	return rank === "3" || rank === "6"
 }
 
 const isValidCastlingString = (castling: string) =>
@@ -143,7 +109,9 @@ export const parseFen = (fen: string, boardSize = 8): GameState => {
 		throw new Error("Invalid FEN: must contain 6 parts")
 	}
 
-	validateBoardSize(boardSize)
+	if (boardSize < 8 || boardSize > 16) {
+		throw new Error("Invalid board size: must be between 8 and 16")
+	}
 
 	const board: (Piece | null)[][] = []
 	const ranks = position.split("/")
@@ -197,10 +165,8 @@ export const parseFen = (fen: string, boardSize = 8): GameState => {
 			throw new Error(`Invalid FEN: invalid en passant square '${enPassant}'`)
 		}
 
-		if (!isValidEnPassantSquare(enPassant as Square, boardSize)) {
-			throw new Error(
-				"Invalid FEN: invalid en passant square for this board size"
-			)
+		if (!isValidEnPassantSquare(enPassant as Square)) {
+			throw new Error("Invalid FEN: en passant square must be on rank 3 or 6")
 		}
 	}
 
