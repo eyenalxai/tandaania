@@ -356,39 +356,34 @@ const getKingMoves = (
 	return moves
 }
 
-const canCastleKingSide = (state: GameState, color: Color) => {
-	const squares = color === "w" ? ["f1", "g1"] : ["f8", "g8"]
-	const kingSquare = color === "w" ? "e1" : "e8"
-	const rookSquare = color === "w" ? "h1" : "h8"
+const getCastlingRanks = (color: Color) => (color === "w" ? 7 : 0)
 
-	if (!getPieceAt(state.board, rookSquare as Square)?.startsWith(`${color}r`)) {
-		return false
-	}
+const canCastleKingSide = (state: GameState, color: Color) => {
+	const backRank = getCastlingRanks(color)
+	const kingSquare = coordsToSquare(backRank, 4)
+	const squares = [coordsToSquare(backRank, 5), coordsToSquare(backRank, 6)]
 
 	return (
-		squares.every((square) => !getPieceAt(state.board, square as Square)) &&
-		!isSquareUnderAttack(state, kingSquare as Square, color) &&
-		squares.every(
-			(square) => !isSquareUnderAttack(state, square as Square, color)
-		)
+		squares.every((sq) => !getPieceAt(state.board, sq)) &&
+		!isSquareUnderAttack(state, kingSquare, color) &&
+		squares.every((sq) => !isSquareUnderAttack(state, sq, color))
 	)
 }
 
 const canCastleQueenSide = (state: GameState, color: Color) => {
-	const squares = color === "w" ? ["d1", "c1", "b1"] : ["d8", "c8", "b8"]
-	const kingSquare = color === "w" ? "e1" : "e8"
-	const checkSquares = color === "w" ? ["d1", "c1"] : ["d8", "c8"]
-	const rookSquare = color === "w" ? "a1" : "a8"
-
-	if (!getPieceAt(state.board, rookSquare as Square)?.startsWith(`${color}r`)) {
-		return false
-	}
+	const backRank = getCastlingRanks(color)
+	const kingSquare = coordsToSquare(backRank, 4)
+	const squares = [
+		coordsToSquare(backRank, 3),
+		coordsToSquare(backRank, 2),
+		coordsToSquare(backRank, 1)
+	]
 
 	return (
-		squares.every((square) => !getPieceAt(state.board, square as Square)) &&
-		!isSquareUnderAttack(state, kingSquare as Square, color) &&
-		checkSquares.every(
-			(square) => !isSquareUnderAttack(state, square as Square, color)
+		squares.every((sq) => !getPieceAt(state.board, sq)) &&
+		!isSquareUnderAttack(state, kingSquare, color) &&
+		[coordsToSquare(backRank, 3), coordsToSquare(backRank, 2)].every(
+			(sq) => !isSquareUnderAttack(state, sq, color)
 		)
 	)
 }
