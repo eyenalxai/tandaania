@@ -143,22 +143,23 @@ export class ChessGame {
 
 		// Handle castling
 		if (movingPiece[1] === "k") {
-			if (move.from === "e1" && move.to === "g1") {
-				// White kingside
-				this.state.board[7][7] = null
-				this.state.board[7][5] = "wr"
-			} else if (move.from === "e1" && move.to === "c1") {
-				// White queenside
-				this.state.board[7][0] = null
-				this.state.board[7][3] = "wr"
-			} else if (move.from === "e8" && move.to === "g8") {
-				// Black kingside
-				this.state.board[0][7] = null
-				this.state.board[0][5] = "br"
-			} else if (move.from === "e8" && move.to === "c8") {
-				// Black queenside
-				this.state.board[0][0] = null
-				this.state.board[0][3] = "br"
+			const lastRank =
+				this.state.activeColor === "w" ? this.state.boardSize - 1 : 0
+			const kingFile = Math.floor(this.state.boardSize / 2)
+
+			// King moved two squares right (kingside)
+			if (fromFile === kingFile && toFile === kingFile + 2) {
+				// Move kingside rook
+				this.state.board[lastRank][this.state.boardSize - 1] = null
+				this.state.board[lastRank][kingFile + 1] =
+					`${this.state.activeColor}r` as Piece
+			}
+			// King moved two squares left (queenside)
+			else if (fromFile === kingFile && toFile === kingFile - 2) {
+				// Move queenside rook
+				this.state.board[lastRank][0] = null
+				this.state.board[lastRank][kingFile - 1] =
+					`${this.state.activeColor}r` as Piece
 			}
 		}
 
@@ -172,10 +173,23 @@ export class ChessGame {
 				this.state.castling.blackQueenSide = false
 			}
 		} else if (movingPiece[1] === "r") {
-			if (move.from === "a1") this.state.castling.whiteQueenSide = false
-			if (move.from === "h1") this.state.castling.whiteKingSide = false
-			if (move.from === "a8") this.state.castling.blackQueenSide = false
-			if (move.from === "h8") this.state.castling.blackKingSide = false
+			const lastRank =
+				this.state.activeColor === "w" ? this.state.boardSize - 1 : 0
+			if (fromRank === lastRank) {
+				if (fromFile === 0) {
+					if (this.state.activeColor === "w") {
+						this.state.castling.whiteQueenSide = false
+					} else {
+						this.state.castling.blackQueenSide = false
+					}
+				} else if (fromFile === this.state.boardSize - 1) {
+					if (this.state.activeColor === "w") {
+						this.state.castling.whiteKingSide = false
+					} else {
+						this.state.castling.blackKingSide = false
+					}
+				}
+			}
 		}
 
 		// Update en passant target
@@ -202,7 +216,7 @@ export class ChessGame {
 			this.state.activeColor === "w" ? "b" : "w"
 		) as Color
 
-		// Add this section to handle captured rooks
+		// Handle captured rooks affecting castling rights
 		const capturedPiece = getPieceAt(
 			this.state.board,
 			move.to,
@@ -210,19 +224,27 @@ export class ChessGame {
 		)
 
 		if (capturedPiece?.[1] === "r") {
-			switch (move.to) {
-				case "a1":
-					this.state.castling.whiteQueenSide = false
-					break
-				case "h1":
-					this.state.castling.whiteKingSide = false
-					break
-				case "a8":
-					this.state.castling.blackQueenSide = false
-					break
-				case "h8":
-					this.state.castling.blackKingSide = false
-					break
+			const [capturedRank, capturedFile] = squareToCoords(
+				move.to,
+				this.state.boardSize
+			)
+			const opponentLastRank =
+				this.state.activeColor === "w" ? 0 : this.state.boardSize - 1
+
+			if (capturedRank === opponentLastRank) {
+				if (capturedFile === 0) {
+					if (this.state.activeColor === "w") {
+						this.state.castling.blackQueenSide = false
+					} else {
+						this.state.castling.whiteQueenSide = false
+					}
+				} else if (capturedFile === this.state.boardSize - 1) {
+					if (this.state.activeColor === "w") {
+						this.state.castling.blackKingSide = false
+					} else {
+						this.state.castling.whiteKingSide = false
+					}
+				}
 			}
 		}
 

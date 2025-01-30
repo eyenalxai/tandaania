@@ -1,10 +1,10 @@
 # Codebase Improvement Plan
 
 ## Board Size Validation
-- [ ] Review and fix hardcoded 8x8 board assumptions throughout codebase
-- [ ] Update castling logic to work with variable board sizes
-- [ ] Add comprehensive board size validation checks
-- [ ] Document board size limitations and requirements
+- [x] Review and fix hardcoded 8x8 board assumptions throughout codebase
+- [x] Update castling logic to work with variable board sizes
+- [x] Add comprehensive board size validation checks
+- [x] Document board size limitations and requirements
 
 ## Castling Implementation
 - [ ] Refactor hardcoded castling square positions
