@@ -13,8 +13,7 @@ export type Position = {
 
 const fileToIndex = (file: string) => file.charCodeAt(0) - "a".charCodeAt(0)
 
-const rankToIndex = (rank: string, boardSize: number) =>
-	boardSize - Number.parseInt(rank)
+const rankToIndex = (rank: string) => 8 - Number.parseInt(rank)
 
 const indexToFile = (index: number) =>
 	String.fromCharCode(index + "a".charCodeAt(0))
@@ -22,10 +21,10 @@ const indexToFile = (index: number) =>
 const indexToRank = (index: number, boardSize: number) =>
 	(boardSize - index).toString()
 
-export const squareToCoords = (square: Square, boardSize: number) => {
+export const squareToCoords = (square: Square) => {
 	const [file, ...rankDigits] = square.split("")
 	const rank = rankDigits.join("")
-	return [rankToIndex(rank, boardSize), fileToIndex(file)]
+	return [rankToIndex(rank), fileToIndex(file)]
 }
 
 export const coordsToSquare = (rank: number, file: number, boardSize: number) =>
@@ -34,12 +33,8 @@ export const coordsToSquare = (rank: number, file: number, boardSize: number) =>
 export const isInBounds = (rank: number, file: number, boardSize: number) =>
 	rank >= 0 && rank < boardSize && file >= 0 && file < boardSize
 
-export const getPieceAt = (
-	board: GameState["board"],
-	square: Square,
-	boardSize: number
-) => {
-	const [rank, file] = squareToCoords(square, boardSize)
+export const getPieceAt = (board: GameState["board"], square: Square) => {
+	const [rank, file] = squareToCoords(square)
 	return board[rank][file]
 }
 
@@ -60,11 +55,11 @@ export const getAllValidMoves = (state: GameState) => {
 }
 
 export const getValidMoves = (state: GameState, square: Square) => {
-	const piece = getPieceAt(state.board, square, state.boardSize)
+	const piece = getPieceAt(state.board, square)
 	if (!piece || piece[0] !== state.activeColor) return []
 
 	const [color, type] = piece
-	const [rank, file] = squareToCoords(square, state.boardSize)
+	const [rank, file] = squareToCoords(square)
 	const moves: Move[] = []
 
 	switch (type) {
@@ -99,15 +94,15 @@ const getPawnMoves = (
 ) => {
 	const moves: Move[] = []
 	const direction = color === "w" ? -1 : 1
-	const startRank = color === "w" ? state.boardSize - 2 : 1
-	const promotionRank = color === "w" ? 0 : state.boardSize - 1
+	const startRank = color === "w" ? 6 : 1
+	const promotionRank = color === "w" ? 0 : 7
 
 	const newRank = rank + direction
 	const forwardSquare = coordsToSquare(newRank, file, state.boardSize)
 
 	if (
 		isInBounds(newRank, file, state.boardSize) &&
-		!getPieceAt(state.board, forwardSquare, state.boardSize)
+		!getPieceAt(state.board, forwardSquare)
 	) {
 		if (newRank === promotionRank) {
 			for (const piece of ["q", "r", "b", "n"] as const) {
@@ -127,8 +122,7 @@ const getPawnMoves = (
 				rank === startRank &&
 				!getPieceAt(
 					state.board,
-					coordsToSquare(rank + direction * 2, file, state.boardSize),
-					state.boardSize
+					coordsToSquare(rank + direction * 2, file, state.boardSize)
 				)
 			) {
 				moves.push({
@@ -143,7 +137,7 @@ const getPawnMoves = (
 		if (!isInBounds(newRank, captureFile, state.boardSize)) continue
 
 		const targetSquare = coordsToSquare(newRank, captureFile, state.boardSize)
-		const targetPiece = getPieceAt(state.board, targetSquare, state.boardSize)
+		const targetPiece = getPieceAt(state.board, targetSquare)
 
 		if (targetSquare === state.enPassantTarget) {
 			const correctRank = color === "w" ? 3 : 4
@@ -151,8 +145,7 @@ const getPawnMoves = (
 
 			const capturedPawn = getPieceAt(
 				state.board,
-				coordsToSquare(rank, captureFile, state.boardSize),
-				state.boardSize
+				coordsToSquare(rank, captureFile, state.boardSize)
 			)
 
 			if (capturedPawn?.[1] === "p" && capturedPawn?.[0] !== color) {
@@ -208,7 +201,7 @@ const getKnightMoves = (
 		if (!isInBounds(newRank, newFile, state.boardSize)) continue
 
 		const targetSquare = coordsToSquare(newRank, newFile, state.boardSize)
-		const targetPiece = getPieceAt(state.board, targetSquare, state.boardSize)
+		const targetPiece = getPieceAt(state.board, targetSquare)
 
 		if (!targetPiece || targetPiece[0] !== color) {
 			moves.push({
@@ -236,7 +229,7 @@ const getSlidingMoves = (
 
 		while (isInBounds(newRank, newFile, state.boardSize)) {
 			const targetSquare = coordsToSquare(newRank, newFile, state.boardSize)
-			const targetPiece = getPieceAt(state.board, targetSquare, state.boardSize)
+			const targetPiece = getPieceAt(state.board, targetSquare)
 
 			if (!targetPiece) {
 				moves.push({
@@ -328,7 +321,7 @@ const getKingMoves = (
 		if (!isInBounds(newRank, newFile, state.boardSize)) continue
 
 		const targetSquare = coordsToSquare(newRank, newFile, state.boardSize)
-		const targetPiece = getPieceAt(state.board, targetSquare, state.boardSize)
+		const targetPiece = getPieceAt(state.board, targetSquare)
 
 		if (!targetPiece || targetPiece[0] !== color) {
 			moves.push({
@@ -376,18 +369,12 @@ const canCastleKingSide = (state: GameState, color: Color) => {
 	const kingSquare = color === "w" ? "e1" : "e8"
 	const rookSquare = color === "w" ? "h1" : "h8"
 
-	if (
-		!getPieceAt(state.board, rookSquare as Square, state.boardSize)?.startsWith(
-			`${color}r`
-		)
-	) {
+	if (!getPieceAt(state.board, rookSquare as Square)?.startsWith(`${color}r`)) {
 		return false
 	}
 
 	return (
-		squares.every(
-			(square) => !getPieceAt(state.board, square as Square, state.boardSize)
-		) &&
+		squares.every((square) => !getPieceAt(state.board, square as Square)) &&
 		!isSquareUnderAttack(state, kingSquare as Square, color, state.boardSize) &&
 		squares.every(
 			(square) =>
@@ -402,18 +389,12 @@ const canCastleQueenSide = (state: GameState, color: Color) => {
 	const checkSquares = color === "w" ? ["d1", "c1"] : ["d8", "c8"]
 	const rookSquare = color === "w" ? "a1" : "a8"
 
-	if (
-		!getPieceAt(state.board, rookSquare as Square, state.boardSize)?.startsWith(
-			`${color}r`
-		)
-	) {
+	if (!getPieceAt(state.board, rookSquare as Square)?.startsWith(`${color}r`)) {
 		return false
 	}
 
 	return (
-		squares.every(
-			(square) => !getPieceAt(state.board, square as Square, state.boardSize)
-		) &&
+		squares.every((square) => !getPieceAt(state.board, square as Square)) &&
 		!isSquareUnderAttack(state, kingSquare as Square, color, state.boardSize) &&
 		checkSquares.every(
 			(square) =>
@@ -484,8 +465,8 @@ export const getRawMovesForPiece = (
 
 const movePutsKingInCheck = (state: GameState, move: Move) => {
 	const newBoard = state.board.map((rank) => [...rank])
-	const [fromRank, fromFile] = squareToCoords(move.from, state.boardSize)
-	const [toRank, toFile] = squareToCoords(move.to, state.boardSize)
+	const [fromRank, fromFile] = squareToCoords(move.from)
+	const [toRank, toFile] = squareToCoords(move.to)
 	const movingPiece = newBoard[fromRank][fromFile]
 
 	if (
@@ -540,12 +521,12 @@ export const getAllCaptureMoves = (state: GameState) => {
 	const moves = getAllValidMoves(state)
 	return moves.filter((move) => {
 		// Check for regular captures
-		const targetPiece = getPieceAt(state.board, move.to, state.boardSize)
+		const targetPiece = getPieceAt(state.board, move.to)
 		if (targetPiece && targetPiece[0] !== state.activeColor) return true
 
 		// Check for en passant captures
 		if (move.to === state.enPassantTarget) {
-			const [fromRank, fromFile] = squareToCoords(move.from, state.boardSize)
+			const [fromRank, fromFile] = squareToCoords(move.from)
 			const piece = state.board[fromRank][fromFile]
 			return piece?.[1] === "p"
 		}
@@ -558,12 +539,12 @@ export const getAllNonCaptureMoves = (state: GameState) => {
 	const moves = getAllValidMoves(state)
 	return moves.filter((move) => {
 		// Check for regular captures
-		const targetPiece = getPieceAt(state.board, move.to, state.boardSize)
+		const targetPiece = getPieceAt(state.board, move.to)
 		if (targetPiece && targetPiece[0] !== state.activeColor) return false
 
 		// Check for en passant captures
 		if (move.to === state.enPassantTarget) {
-			const [fromRank, fromFile] = squareToCoords(move.from, state.boardSize)
+			const [fromRank, fromFile] = squareToCoords(move.from)
 			const piece = state.board[fromRank][fromFile]
 			return !(piece?.[1] === "p")
 		}
@@ -573,7 +554,7 @@ export const getAllNonCaptureMoves = (state: GameState) => {
 }
 
 export const moveToAlgebraic = (state: GameState, move: Move): string => {
-	const [fromRank, fromFile] = squareToCoords(move.from, state.boardSize)
+	const [fromRank, fromFile] = squareToCoords(move.from)
 	const piece = state.board[fromRank][fromFile]
 	if (!piece) return ""
 
@@ -588,7 +569,7 @@ export const moveToAlgebraic = (state: GameState, move: Move): string => {
 	let notation = ""
 	const pieceType = piece[1]
 	const isCapture =
-		getPieceAt(state.board, move.to, state.boardSize) !== null ||
+		getPieceAt(state.board, move.to) !== null ||
 		(pieceType === "p" && move.to === state.enPassantTarget)
 
 	// For pawns, we need to add the file when capturing
@@ -604,18 +585,18 @@ export const moveToAlgebraic = (state: GameState, move: Move): string => {
 		// Handle disambiguation
 		const ambiguousMoves = getAllValidMoves(state).filter((m) => {
 			if (m.to !== move.to) return false
-			const [r, f] = squareToCoords(m.from, state.boardSize)
+			const [r, f] = squareToCoords(m.from)
 			const p = state.board[r][f]
 			return p?.[1] === pieceType && m.from !== move.from
 		})
 
 		if (ambiguousMoves.length > 0) {
 			const sameFile = ambiguousMoves.some((m) => {
-				const [, f] = squareToCoords(m.from, state.boardSize)
+				const [, f] = squareToCoords(m.from)
 				return f === fromFile
 			})
 			const sameRank = ambiguousMoves.some((m) => {
-				const [r] = squareToCoords(m.from, state.boardSize)
+				const [r] = squareToCoords(m.from)
 				return r === fromRank
 			})
 

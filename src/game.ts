@@ -42,7 +42,7 @@ export class ChessGame {
 		for (let rank = 0; rank < this.state.boardSize; rank++) {
 			for (let file = 0; file < this.state.boardSize; file++) {
 				const square = coordsToSquare(rank, file, this.state.boardSize)
-				const piece = getPieceAt(this.state.board, square, this.state.boardSize)
+				const piece = getPieceAt(this.state.board, square)
 				if (!piece || piece[0] !== activeColor) continue
 
 				const moves = this.getValidMoves(square)
@@ -59,7 +59,7 @@ export class ChessGame {
 		for (let rank = 0; rank < this.state.boardSize; rank++) {
 			for (let file = 0; file < this.state.boardSize; file++) {
 				const square = coordsToSquare(rank, file, this.state.boardSize)
-				const piece = getPieceAt(this.state.board, square, this.state.boardSize)
+				const piece = getPieceAt(this.state.board, square)
 				if (piece && piece[0] === activeColor && piece[1] === "k") {
 					kingSquare = square
 					break
@@ -78,11 +78,7 @@ export class ChessGame {
 			for (let rank = 0; rank < this.state.boardSize; rank++) {
 				for (let file = 0; file < this.state.boardSize; file++) {
 					const square = coordsToSquare(rank, file, this.state.boardSize)
-					const piece = getPieceAt(
-						tempState.board,
-						square,
-						this.state.boardSize
-					)
+					const piece = getPieceAt(tempState.board, square)
 					if (!piece || piece[0] === activeColor) continue
 
 					const moves = getRawMovesForPiece(
@@ -120,13 +116,9 @@ export class ChessGame {
 			return false
 		}
 
-		const [fromRank, fromFile] = squareToCoords(move.from, this.state.boardSize)
-		const [toRank, toFile] = squareToCoords(move.to, this.state.boardSize)
-		const movingPiece = getPieceAt(
-			this.state.board,
-			move.from,
-			this.state.boardSize
-		)
+		const [fromRank, fromFile] = squareToCoords(move.from)
+		const [toRank, toFile] = squareToCoords(move.to)
+		const movingPiece = getPieceAt(this.state.board, move.from)
 
 		if (!movingPiece) return false
 
@@ -182,7 +174,7 @@ export class ChessGame {
 		if (movingPiece[1] === "p" && Math.abs(toRank - fromRank) === 2) {
 			const enPassantRank = (fromRank + toRank) / 2
 			this.state.enPassantTarget =
-				`${String.fromCharCode(fromFile + 97)}${this.state.boardSize - enPassantRank}` as Square
+				`${String.fromCharCode(fromFile + 97)}${8 - enPassantRank}` as Square
 		} else {
 			this.state.enPassantTarget = null
 		}
@@ -203,11 +195,7 @@ export class ChessGame {
 		) as Color
 
 		// Add this section to handle captured rooks
-		const capturedPiece = getPieceAt(
-			this.state.board,
-			move.to,
-			this.state.boardSize
-		)
+		const capturedPiece = getPieceAt(this.state.board, move.to)
 
 		if (capturedPiece?.[1] === "r") {
 			switch (move.to) {

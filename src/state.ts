@@ -116,8 +116,8 @@ export const parseFen = (fen: string, boardSize = 8): GameState => {
 	const board: (Piece | null)[][] = []
 	const ranks = position.split("/")
 
-	if (ranks.length !== boardSize) {
-		throw new Error(`Invalid FEN: board must have ${boardSize} ranks`)
+	if (ranks.length !== 8) {
+		throw new Error("Invalid FEN: must have 8 ranks")
 	}
 
 	for (const rank of ranks) {

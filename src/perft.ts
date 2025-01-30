@@ -21,8 +21,8 @@ export type PerftResult = {
 }
 
 const isCapture = (state: GameState, move: Move) => {
-	const [toRank, toFile] = squareToCoords(move.to, state.boardSize)
-	const [fromRank, fromFile] = squareToCoords(move.from, state.boardSize)
+	const [toRank, toFile] = squareToCoords(move.to)
+	const [fromRank, fromFile] = squareToCoords(move.from)
 	const movingPiece = state.board[fromRank][fromFile]
 
 	return (
@@ -32,15 +32,15 @@ const isCapture = (state: GameState, move: Move) => {
 }
 
 const isCastle = (state: GameState, move: Move) => {
-	const [fromRank, fromFile] = squareToCoords(move.from, state.boardSize)
+	const [fromRank, fromFile] = squareToCoords(move.from)
 	const piece = state.board[fromRank][fromFile]
 	if (!piece || piece[1] !== "k") return false
 
-	return Math.abs(fromFile - squareToCoords(move.to, state.boardSize)[1]) === 2
+	return Math.abs(fromFile - squareToCoords(move.to)[1]) === 2
 }
 
 const isEnPassant = (state: GameState, move: Move) => {
-	const [fromRank, fromFile] = squareToCoords(move.from, state.boardSize)
+	const [fromRank, fromFile] = squareToCoords(move.from)
 	const movingPiece = state.board[fromRank][fromFile]
 	return movingPiece?.[1] === "p" && move.to === state.enPassantTarget
 }
@@ -48,7 +48,7 @@ const isEnPassant = (state: GameState, move: Move) => {
 const isPromotion = (move: Move) => move.promotion !== undefined
 
 const isDiscoveryCheck = (state: GameState, move: Move) => {
-	const [fromRank, fromFile] = squareToCoords(move.from, state.boardSize)
+	const [fromRank, fromFile] = squareToCoords(move.from)
 	const movingPiece = state.board[fromRank][fromFile]
 	if (!movingPiece) return false
 
@@ -84,7 +84,7 @@ const findKingSquare = (
 
 const isDoubleCheck = (game: ChessGame, move: Move) => {
 	const state = game.getState()
-	const [fromRank, fromFile] = squareToCoords(move.from, state.boardSize)
+	const [fromRank, fromFile] = squareToCoords(move.from)
 	const movingPiece = state.board[fromRank][fromFile]
 	if (!movingPiece) return false
 
