@@ -22,8 +22,8 @@ export class ChessGame {
 	private readonly state: GameState
 	private moveHistory: Move[] = []
 
-	constructor(fen: string = DEFAULT_FEN, boardSize = 8) {
-		this.state = parseFen(fen, boardSize)
+	constructor(fen: string = DEFAULT_FEN) {
+		this.state = parseFen(fen)
 	}
 
 	public getState = () => ({ ...this.state })
@@ -39,9 +39,9 @@ export class ChessGame {
 		let hasValidMoves = false
 		let isInCheck = false
 
-		for (let rank = 0; rank < this.state.boardSize; rank++) {
-			for (let file = 0; file < this.state.boardSize; file++) {
-				const square = coordsToSquare(rank, file, this.state.boardSize)
+		for (let rank = 0; rank < 8; rank++) {
+			for (let file = 0; file < 8; file++) {
+				const square = coordsToSquare(rank, file)
 				const piece = getPieceAt(this.state.board, square)
 				if (!piece || piece[0] !== activeColor) continue
 
@@ -56,9 +56,9 @@ export class ChessGame {
 
 		// Find the king's position
 		let kingSquare: Square | null = null
-		for (let rank = 0; rank < this.state.boardSize; rank++) {
-			for (let file = 0; file < this.state.boardSize; file++) {
-				const square = coordsToSquare(rank, file, this.state.boardSize)
+		for (let rank = 0; rank < 8; rank++) {
+			for (let file = 0; file < 8; file++) {
+				const square = coordsToSquare(rank, file)
 				const piece = getPieceAt(this.state.board, square)
 				if (piece && piece[0] === activeColor && piece[1] === "k") {
 					kingSquare = square
@@ -75,9 +75,9 @@ export class ChessGame {
 				activeColor: (activeColor === "w" ? "b" : "w") as Color
 			}
 
-			for (let rank = 0; rank < this.state.boardSize; rank++) {
-				for (let file = 0; file < this.state.boardSize; file++) {
-					const square = coordsToSquare(rank, file, this.state.boardSize)
+			for (let rank = 0; rank < 8; rank++) {
+				for (let file = 0; file < 8; file++) {
+					const square = coordsToSquare(rank, file)
 					const piece = getPieceAt(tempState.board, square)
 					if (!piece || piece[0] === activeColor) continue
 
@@ -194,9 +194,8 @@ export class ChessGame {
 			this.state.activeColor === "w" ? "b" : "w"
 		) as Color
 
-		// Add this section to handle captured rooks
+		// Handle captured rooks for castling rights
 		const capturedPiece = getPieceAt(this.state.board, move.to)
-
 		if (capturedPiece?.[1] === "r") {
 			switch (move.to) {
 				case "a1":

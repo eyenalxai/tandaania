@@ -18,20 +18,18 @@ const rankToIndex = (rank: string) => 8 - Number.parseInt(rank)
 const indexToFile = (index: number) =>
 	String.fromCharCode(index + "a".charCodeAt(0))
 
-const indexToRank = (index: number, boardSize: number) =>
-	(boardSize - index).toString()
+const indexToRank = (index: number) => (8 - index).toString()
 
 export const squareToCoords = (square: Square) => {
-	const [file, ...rankDigits] = square.split("")
-	const rank = rankDigits.join("")
+	const [file, rank] = square.split("")
 	return [rankToIndex(rank), fileToIndex(file)]
 }
 
-export const coordsToSquare = (rank: number, file: number, boardSize: number) =>
-	`${indexToFile(file)}${indexToRank(rank, boardSize)}` as Square
+export const coordsToSquare = (rank: number, file: number) =>
+	`${indexToFile(file)}${indexToRank(rank)}` as Square
 
-export const isInBounds = (rank: number, file: number, boardSize: number) =>
-	rank >= 0 && rank < boardSize && file >= 0 && file < boardSize
+export const isInBounds = (rank: number, file: number) =>
+	rank >= 0 && rank < 8 && file >= 0 && file < 8
 
 export const getPieceAt = (board: GameState["board"], square: Square) => {
 	const [rank, file] = squareToCoords(square)
@@ -41,12 +39,12 @@ export const getPieceAt = (board: GameState["board"], square: Square) => {
 export const getAllValidMoves = (state: GameState) => {
 	const moves: Move[] = []
 
-	for (let rank = 0; rank < state.boardSize; rank++) {
-		for (let file = 0; file < state.boardSize; file++) {
+	for (let rank = 0; rank < 8; rank++) {
+		for (let file = 0; file < 8; file++) {
 			const piece = state.board[rank][file]
 			if (!piece || piece[0] !== state.activeColor) continue
 
-			const square = coordsToSquare(rank, file, state.boardSize)
+			const square = coordsToSquare(rank, file)
 			moves.push(...getValidMoves(state, square))
 		}
 	}
@@ -98,45 +96,39 @@ const getPawnMoves = (
 	const promotionRank = color === "w" ? 0 : 7
 
 	const newRank = rank + direction
-	const forwardSquare = coordsToSquare(newRank, file, state.boardSize)
+	const forwardSquare = coordsToSquare(newRank, file)
 
-	if (
-		isInBounds(newRank, file, state.boardSize) &&
-		!getPieceAt(state.board, forwardSquare)
-	) {
+	if (isInBounds(newRank, file) && !getPieceAt(state.board, forwardSquare)) {
 		if (newRank === promotionRank) {
 			for (const piece of ["q", "r", "b", "n"] as const) {
 				moves.push({
-					from: coordsToSquare(rank, file, state.boardSize),
+					from: coordsToSquare(rank, file),
 					to: forwardSquare,
 					promotion: piece
 				})
 			}
 		} else {
 			moves.push({
-				from: coordsToSquare(rank, file, state.boardSize),
+				from: coordsToSquare(rank, file),
 				to: forwardSquare
 			})
 
 			if (
 				rank === startRank &&
-				!getPieceAt(
-					state.board,
-					coordsToSquare(rank + direction * 2, file, state.boardSize)
-				)
+				!getPieceAt(state.board, coordsToSquare(rank + direction * 2, file))
 			) {
 				moves.push({
-					from: coordsToSquare(rank, file, state.boardSize),
-					to: coordsToSquare(rank + direction * 2, file, state.boardSize)
+					from: coordsToSquare(rank, file),
+					to: coordsToSquare(rank + direction * 2, file)
 				})
 			}
 		}
 	}
 
 	for (const captureFile of [file - 1, file + 1]) {
-		if (!isInBounds(newRank, captureFile, state.boardSize)) continue
+		if (!isInBounds(newRank, captureFile)) continue
 
-		const targetSquare = coordsToSquare(newRank, captureFile, state.boardSize)
+		const targetSquare = coordsToSquare(newRank, captureFile)
 		const targetPiece = getPieceAt(state.board, targetSquare)
 
 		if (targetSquare === state.enPassantTarget) {
@@ -145,12 +137,12 @@ const getPawnMoves = (
 
 			const capturedPawn = getPieceAt(
 				state.board,
-				coordsToSquare(rank, captureFile, state.boardSize)
+				coordsToSquare(rank, captureFile)
 			)
 
 			if (capturedPawn?.[1] === "p" && capturedPawn?.[0] !== color) {
 				moves.push({
-					from: coordsToSquare(rank, file, state.boardSize),
+					from: coordsToSquare(rank, file),
 					to: targetSquare
 				})
 			}
@@ -158,14 +150,14 @@ const getPawnMoves = (
 			if (newRank === promotionRank) {
 				for (const piece of ["q", "r", "b", "n"] as const) {
 					moves.push({
-						from: coordsToSquare(rank, file, state.boardSize),
+						from: coordsToSquare(rank, file),
 						to: targetSquare,
 						promotion: piece
 					})
 				}
 			} else {
 				moves.push({
-					from: coordsToSquare(rank, file, state.boardSize),
+					from: coordsToSquare(rank, file),
 					to: targetSquare
 				})
 			}
@@ -198,14 +190,14 @@ const getKnightMoves = (
 		const newRank = rank + dRank
 		const newFile = file + dFile
 
-		if (!isInBounds(newRank, newFile, state.boardSize)) continue
+		if (!isInBounds(newRank, newFile)) continue
 
-		const targetSquare = coordsToSquare(newRank, newFile, state.boardSize)
+		const targetSquare = coordsToSquare(newRank, newFile)
 		const targetPiece = getPieceAt(state.board, targetSquare)
 
 		if (!targetPiece || targetPiece[0] !== color) {
 			moves.push({
-				from: coordsToSquare(rank, file, state.boardSize),
+				from: coordsToSquare(rank, file),
 				to: targetSquare
 			})
 		}
@@ -227,19 +219,19 @@ const getSlidingMoves = (
 		let newRank = rank + dRank
 		let newFile = file + dFile
 
-		while (isInBounds(newRank, newFile, state.boardSize)) {
-			const targetSquare = coordsToSquare(newRank, newFile, state.boardSize)
+		while (isInBounds(newRank, newFile)) {
+			const targetSquare = coordsToSquare(newRank, newFile)
 			const targetPiece = getPieceAt(state.board, targetSquare)
 
 			if (!targetPiece) {
 				moves.push({
-					from: coordsToSquare(rank, file, state.boardSize),
+					from: coordsToSquare(rank, file),
 					to: targetSquare
 				})
 			} else {
 				if (targetPiece[0] !== color) {
 					moves.push({
-						from: coordsToSquare(rank, file, state.boardSize),
+						from: coordsToSquare(rank, file),
 						to: targetSquare
 					})
 				}
@@ -318,14 +310,14 @@ const getKingMoves = (
 		const newRank = rank + dRank
 		const newFile = file + dFile
 
-		if (!isInBounds(newRank, newFile, state.boardSize)) continue
+		if (!isInBounds(newRank, newFile)) continue
 
-		const targetSquare = coordsToSquare(newRank, newFile, state.boardSize)
+		const targetSquare = coordsToSquare(newRank, newFile)
 		const targetPiece = getPieceAt(state.board, targetSquare)
 
 		if (!targetPiece || targetPiece[0] !== color) {
 			moves.push({
-				from: coordsToSquare(rank, file, state.boardSize),
+				from: coordsToSquare(rank, file),
 				to: targetSquare
 			})
 		}
@@ -375,10 +367,9 @@ const canCastleKingSide = (state: GameState, color: Color) => {
 
 	return (
 		squares.every((square) => !getPieceAt(state.board, square as Square)) &&
-		!isSquareUnderAttack(state, kingSquare as Square, color, state.boardSize) &&
+		!isSquareUnderAttack(state, kingSquare as Square, color) &&
 		squares.every(
-			(square) =>
-				!isSquareUnderAttack(state, square as Square, color, state.boardSize)
+			(square) => !isSquareUnderAttack(state, square as Square, color)
 		)
 	)
 }
@@ -395,10 +386,9 @@ const canCastleQueenSide = (state: GameState, color: Color) => {
 
 	return (
 		squares.every((square) => !getPieceAt(state.board, square as Square)) &&
-		!isSquareUnderAttack(state, kingSquare as Square, color, state.boardSize) &&
+		!isSquareUnderAttack(state, kingSquare as Square, color) &&
 		checkSquares.every(
-			(square) =>
-				!isSquareUnderAttack(state, square as Square, color, state.boardSize)
+			(square) => !isSquareUnderAttack(state, square as Square, color)
 		)
 	)
 }
@@ -406,16 +396,15 @@ const canCastleQueenSide = (state: GameState, color: Color) => {
 export const isSquareUnderAttack = (
 	state: GameState,
 	square: Square,
-	defendingColor: Color,
-	boardSize: number
+	defendingColor: Color
 ) => {
 	const tempState: GameState = {
 		...state,
 		activeColor: defendingColor === "w" ? "b" : "w"
 	}
 
-	for (let rank = 0; rank < boardSize; rank++) {
-		for (let file = 0; file < boardSize; file++) {
+	for (let rank = 0; rank < 8; rank++) {
+		for (let file = 0; file < 8; file++) {
 			const piece = tempState.board[rank][file]
 			if (!piece || piece[0] === defendingColor) continue
 
@@ -489,11 +478,11 @@ const movePutsKingInCheck = (state: GameState, move: Move) => {
 	if (movingPiece && movingPiece[1] === "k") {
 		kingSquare = move.to
 	} else {
-		for (let rank = 0; rank < state.boardSize; rank++) {
-			for (let file = 0; file < state.boardSize; file++) {
+		for (let rank = 0; rank < 8; rank++) {
+			for (let file = 0; file < 8; file++) {
 				const piece = newBoard[rank][file]
 				if (piece && piece[0] === state.activeColor && piece[1] === "k") {
-					kingSquare = coordsToSquare(rank, file, state.boardSize)
+					kingSquare = coordsToSquare(rank, file)
 					break
 				}
 			}
@@ -509,12 +498,7 @@ const movePutsKingInCheck = (state: GameState, move: Move) => {
 		activeColor: state.activeColor === "w" ? "b" : "w"
 	}
 
-	return isSquareUnderAttack(
-		newState,
-		kingSquare,
-		state.activeColor,
-		state.boardSize
-	)
+	return isSquareUnderAttack(newState, kingSquare, state.activeColor)
 }
 
 export const getAllCaptureMoves = (state: GameState) => {
