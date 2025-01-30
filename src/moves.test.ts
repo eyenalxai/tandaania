@@ -2,12 +2,27 @@ import { type Move, getValidMoves, moveToAlgebraic } from "@/moves"
 import { type Square, parseFen } from "@/state"
 import { describe, expect, it } from "vitest"
 
-const expectMoves = (fen: string, square: Square, expectedMoves: Move[]) => {
-	const state = parseFen(fen)
+const expectMoves = (
+	fen: string,
+	square: Square,
+	expectedMoves: Move[],
+	boardSize = 8
+) => {
+	const state = parseFen(fen, boardSize)
 	const moves = getValidMoves(state, square)
 	expect(new Set(moves.map((m) => JSON.stringify(m)))).toEqual(
 		new Set(expectedMoves.map((m) => JSON.stringify(m)))
 	)
+}
+
+const expectAlgebraic = (
+	fen: string,
+	move: Move,
+	expected: string,
+	boardSize = 8
+) => {
+	const state = parseFen(fen, boardSize)
+	expect(moveToAlgebraic(state, move)).toBe(expected)
 }
 
 describe("getValidMoves", () => {
@@ -209,11 +224,6 @@ describe("getValidMoves", () => {
 })
 
 describe("moveToAlgebraic", () => {
-	const expectAlgebraic = (fen: string, move: Move, expected: string) => {
-		const state = parseFen(fen)
-		expect(moveToAlgebraic(state, move)).toBe(expected)
-	}
-
 	it("should handle basic pawn moves", () => {
 		expectAlgebraic(
 			"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
